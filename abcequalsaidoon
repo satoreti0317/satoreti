@@ -1,9 +1,3 @@
---[[ 
-FULL CONTROL SCRIPT
-AUTO PROMPT削除版
-コピペでそのまま使用OK
-]]
-
 --========================
 -- SERVICES
 --========================
@@ -25,8 +19,12 @@ local attachEnabled = true
 local eSpam = false
 local coordVisible = false
 
+-- ★ collect money 用
+local collectEnabled = false
+local claimParts = {}
+
 --========================
--- ProximityPrompt 0秒化（押し時間だけ0）
+-- ProximityPrompt 0秒化
 --========================
 for _, prompt in ipairs(game:GetDescendants()) do
 	if prompt:IsA("ProximityPrompt") then
@@ -49,12 +47,39 @@ local function getRoot()
 end
 
 --========================
+-- Claimパーツ取得（collect money用）
+--========================
+local function isClaim(obj)
+	return obj:IsA("BasePart") and string.find(string.lower(obj.Name),"claim")
+end
+
+local function scanWorkspace()
+	claimParts = {}
+	for _,v in ipairs(workspace:GetDescendants()) do
+		if isClaim(v) then
+			table.insert(claimParts,v)
+			v.Anchored = false
+			v.CanCollide = false
+		end
+	end
+end
+scanWorkspace()
+
+workspace.DescendantAdded:Connect(function(obj)
+	if isClaim(obj) then
+		table.insert(claimParts,obj)
+		obj.Anchored = false
+		obj.CanCollide = false
+	end
+end)
+
+--========================
 -- ClaimBrainrot自動取得
 --========================
 task.spawn(function()
 	while true do
 		if not targetPart or not targetPart.Parent then
-			targetPart = workspace:FindFirstChild(TARGET_NAME, true)
+			targetPart = workspace:FindFirstChild(TARGET_NAME,true)
 			if targetPart then
 				targetPart.Anchored = false
 			end
@@ -64,13 +89,28 @@ task.spawn(function()
 end)
 
 --========================
--- INSTANT STEAL（体ピタ固定）
+-- INSTANT STEAL
 --========================
 RunService.RenderStepped:Connect(function()
 	if not attachEnabled then return end
 	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 	if root and targetPart and targetPart.Parent then
 		targetPart.CFrame = root.CFrame
+	end
+end)
+
+--========================
+-- collect money（Claim吸い寄せ）
+--========================
+RunService.RenderStepped:Connect(function()
+	if not collectEnabled then return end
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	if not root then return end
+
+	for _,part in ipairs(claimParts) do
+		if part and part.Parent then
+			part.CFrame = root.CFrame
+		end
 	end
 end)
 
@@ -94,8 +134,8 @@ end)
 task.spawn(function()
 	while true do
 		if eSpam then
-			VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
-			VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+			VirtualInputManager:SendKeyEvent(true,Enum.KeyCode.E,false,game)
+			VirtualInputManager:SendKeyEvent(false,Enum.KeyCode.E,false,game)
 		end
 		task.wait(0.2)
 	end
@@ -104,19 +144,19 @@ end)
 --========================
 -- UI
 --========================
-local gui = Instance.new("ScreenGui", player.PlayerGui)
+local gui = Instance.new("ScreenGui",player.PlayerGui)
 gui.ResetOnSpawn = false
 
-local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0,220,0,360)
-frame.Position = UDim2.new(0,20,0.5,-180)
+local frame = Instance.new("Frame",gui)
+frame.Size = UDim2.new(0,220,0,410)
+frame.Position = UDim2.new(0,20,0.5,-205)
 frame.BackgroundColor3 = Color3.fromRGB(10,10,10)
 frame.BorderSizePixel = 2
 frame.BorderColor3 = Color3.fromRGB(120,120,120)
 frame.Active = true
 frame.Draggable = true
 
-local title = Instance.new("TextLabel", frame)
+local title = Instance.new("TextLabel",frame)
 title.Size = UDim2.new(1,0,0,30)
 title.BackgroundColor3 = Color3.fromRGB(0,0,0)
 title.Text = "CONTROL PANEL"
@@ -127,7 +167,7 @@ title.TextScaled = true
 -- ボタン生成
 --========================
 local function makeBtn(text,y)
-	local b = Instance.new("TextButton", frame)
+	local b = Instance.new("TextButton",frame)
 	b.Size = UDim2.new(1,-10,0,35)
 	b.Position = UDim2.new(0,5,0,y)
 	b.Text = text
@@ -138,15 +178,22 @@ local function makeBtn(text,y)
 	return b
 end
 
+-- collect money（★追加）
+local collectBtn = makeBtn("collect money : OFF",40)
+collectBtn.MouseButton1Click:Connect(function()
+	collectEnabled = not collectEnabled
+	collectBtn.Text = "collect money : "..(collectEnabled and "ON" or "OFF")
+end)
+
 -- INSTANT STEAL
-local attachBtn = makeBtn("INSTANT STEAL : ON",40)
+local attachBtn = makeBtn("INSTANT STEAL : ON",85)
 attachBtn.MouseButton1Click:Connect(function()
 	attachEnabled = not attachEnabled
 	attachBtn.Text = "INSTANT STEAL : "..(attachEnabled and "ON" or "OFF")
 end)
 
 -- 位置固定
-local freezeBtn = makeBtn("位置固定 : OFF",85)
+local freezeBtn = makeBtn("位置固定 : OFF",130)
 freezeBtn.MouseButton1Click:Connect(function()
 	freezeEnabled = not freezeEnabled
 	if freezeEnabled then freezePosition = getRoot().Position end
@@ -154,22 +201,24 @@ freezeBtn.MouseButton1Click:Connect(function()
 end)
 
 -- Eスパム
-local eBtn = makeBtn("Eスパム : OFF",130)
+local eBtn = makeBtn("Eスパム : OFF",175)
 eBtn.MouseButton1Click:Connect(function()
 	eSpam = not eSpam
 	eBtn.Text = "Eスパム : "..(eSpam and "ON" or "OFF")
 end)
 
 -- 拠点TP
-local baseBtn = makeBtn("拠点TP",175)
+local baseBtn = makeBtn("拠点TP",220)
 baseBtn.MouseButton1Click:Connect(function()
 	getRoot().CFrame = CFrame.new(BASE_POS)
 end)
 
+--========================
 -- 座標表示
-local coordBtn = makeBtn("座標表示 : OFF",220)
+--========================
+local coordBtn = makeBtn("座標表示 : OFF",265)
 
-local coordLabel = Instance.new("TextLabel", gui)
+local coordLabel = Instance.new("TextLabel",gui)
 coordLabel.Size = UDim2.new(0,260,0,30)
 coordLabel.Position = UDim2.new(1,-270,0,20)
 coordLabel.BackgroundColor3 = Color3.fromRGB(0,0,0)
@@ -188,12 +237,14 @@ RunService.RenderStepped:Connect(function()
 	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 	if root then
 		local pos = root.Position
-		coordLabel.Text = string.format("X: %.1f  Y: %.1f  Z: %.1f", pos.X, pos.Y, pos.Z)
+		coordLabel.Text = string.format("X: %.1f  Y: %.1f  Z: %.1f",pos.X,pos.Y,pos.Z)
 	end
 end)
 
--- サーバーホップ（確認付き）
-local hopBtn = makeBtn("サーバーホップ",265)
+--========================
+-- サーバーホップ
+--========================
+local hopBtn = makeBtn("サーバーホップ",310)
 hopBtn.MouseButton1Click:Connect(function()
 	hopBtn.Text = "もう一度押すと移動"
 	local confirm = true
@@ -208,12 +259,14 @@ hopBtn.MouseButton1Click:Connect(function()
 		if not confirm then return end
 		conn:Disconnect()
 		hopBtn.Text = "移動中..."
-		TeleportService:Teleport(game.PlaceId, player)
+		TeleportService:Teleport(game.PlaceId,player)
 	end)
 end)
 
--- UI表示/非表示
-local toggleBtn = Instance.new("TextButton", gui)
+--========================
+-- UI表示切替
+--========================
+local toggleBtn = Instance.new("TextButton",gui)
 toggleBtn.Size = UDim2.new(0,60,0,30)
 toggleBtn.Position = UDim2.new(1,-70,0,60)
 toggleBtn.Text = "UI"
