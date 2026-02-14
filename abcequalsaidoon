@@ -1,23 +1,8 @@
---[[
-WARNING: Heads up! This script has not been verified by ScriptBlox. Use at your own risk!
+--[[ 
+FULL CONTROL SCRIPT
+AUTO PROMPT削除版
+コピペでそのまま使用OK
 ]]
-
---========================
--- ProximityPrompt 0秒
---========================
-for _, prompt in ipairs(game:GetDescendants()) do
-	if prompt:IsA("ProximityPrompt") then
-		prompt.HoldDuration = 0
-	end
-end
-
-game.DescendantAdded:Connect(function(obj)
-	if obj:IsA("ProximityPrompt") then
-		obj.HoldDuration = 0
-	end
-end)
-
-print("E Buttons are set to 0 delay//--Script made by D3v1lHub")
 
 --========================
 -- SERVICES
@@ -25,6 +10,7 @@ print("E Buttons are set to 0 delay//--Script made by D3v1lHub")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
+local TeleportService = game:GetService("TeleportService")
 
 local player = Players.LocalPlayer
 local TARGET_NAME = "ClaimBrainrot"
@@ -38,6 +24,21 @@ local freezePosition
 local attachEnabled = true
 local eSpam = false
 local coordVisible = false
+
+--========================
+-- ProximityPrompt 0秒化（押し時間だけ0）
+--========================
+for _, prompt in ipairs(game:GetDescendants()) do
+	if prompt:IsA("ProximityPrompt") then
+		prompt.HoldDuration = 0
+	end
+end
+
+game.DescendantAdded:Connect(function(obj)
+	if obj:IsA("ProximityPrompt") then
+		obj.HoldDuration = 0
+	end
+end)
 
 --========================
 -- キャラ取得
@@ -67,7 +68,6 @@ end)
 --========================
 RunService.RenderStepped:Connect(function()
 	if not attachEnabled then return end
-
 	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 	if root and targetPart and targetPart.Parent then
 		targetPart.CFrame = root.CFrame
@@ -89,7 +89,7 @@ RunService.RenderStepped:Connect(function()
 end)
 
 --========================
--- Eスパム（0.2秒）
+-- Eスパム
 --========================
 task.spawn(function()
 	while true do
@@ -108,8 +108,8 @@ local gui = Instance.new("ScreenGui", player.PlayerGui)
 gui.ResetOnSpawn = false
 
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0,220,0,280)
-frame.Position = UDim2.new(0,20,0.5,-140)
+frame.Size = UDim2.new(0,220,0,360)
+frame.Position = UDim2.new(0,20,0.5,-180)
 frame.BackgroundColor3 = Color3.fromRGB(10,10,10)
 frame.BorderSizePixel = 2
 frame.BorderColor3 = Color3.fromRGB(120,120,120)
@@ -166,19 +166,15 @@ baseBtn.MouseButton1Click:Connect(function()
 	getRoot().CFrame = CFrame.new(BASE_POS)
 end)
 
--- 座標表示ボタン
+-- 座標表示
 local coordBtn = makeBtn("座標表示 : OFF",220)
 
---========================
--- 座標UI（初期非表示）
---========================
 local coordLabel = Instance.new("TextLabel", gui)
 coordLabel.Size = UDim2.new(0,260,0,30)
 coordLabel.Position = UDim2.new(1,-270,0,20)
 coordLabel.BackgroundColor3 = Color3.fromRGB(0,0,0)
 coordLabel.TextColor3 = Color3.new(1,1,1)
 coordLabel.TextScaled = true
-coordLabel.BorderColor3 = Color3.fromRGB(120,120,120)
 coordLabel.Visible = false
 
 coordBtn.MouseButton1Click:Connect(function()
@@ -187,10 +183,8 @@ coordBtn.MouseButton1Click:Connect(function()
 	coordBtn.Text = "座標表示 : "..(coordVisible and "ON" or "OFF")
 end)
 
--- 座標更新
 RunService.RenderStepped:Connect(function()
 	if not coordVisible then return end
-
 	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 	if root then
 		local pos = root.Position
@@ -198,9 +192,27 @@ RunService.RenderStepped:Connect(function()
 	end
 end)
 
---========================
--- 右上 UI表示/非表示
---========================
+-- サーバーホップ（確認付き）
+local hopBtn = makeBtn("サーバーホップ",265)
+hopBtn.MouseButton1Click:Connect(function()
+	hopBtn.Text = "もう一度押すと移動"
+	local confirm = true
+
+	task.delay(3,function()
+		confirm = false
+		hopBtn.Text = "サーバーホップ"
+	end)
+
+	local conn
+	conn = hopBtn.MouseButton1Click:Connect(function()
+		if not confirm then return end
+		conn:Disconnect()
+		hopBtn.Text = "移動中..."
+		TeleportService:Teleport(game.PlaceId, player)
+	end)
+end)
+
+-- UI表示/非表示
 local toggleBtn = Instance.new("TextButton", gui)
 toggleBtn.Size = UDim2.new(0,60,0,30)
 toggleBtn.Position = UDim2.new(1,-70,0,60)
@@ -208,9 +220,6 @@ toggleBtn.Text = "UI"
 toggleBtn.TextScaled = true
 toggleBtn.BackgroundColor3 = Color3.fromRGB(20,20,20)
 toggleBtn.TextColor3 = Color3.new(1,1,1)
-toggleBtn.BorderColor3 = Color3.fromRGB(120,120,120)
-toggleBtn.Active = true
-toggleBtn.Draggable = true
 
 local hidden = false
 toggleBtn.MouseButton1Click:Connect(function()
