@@ -16,17 +16,19 @@ local TARGET_NAME = "ClaimBrainrot"
 local BASE_POS = Vector3.new(292.6,5,-68.9)
 
 --========================
--- 状態管理（超重要）
+-- 状態管理
 --========================
 local collectEnabled=false
 local attachEnabled=false
 local freezeEnabled=false
 local eSpamEnabled=false
 local coordEnabled=false
+local speedStealEnabled=false
 
 local targetPart
 local freezePosition
 local claimParts={}
+local originalPromptTimes={}
 
 --========================
 -- キャラ取得
@@ -37,17 +39,27 @@ local function getRoot()
 end
 
 --========================
--- ProximityPrompt 0秒化
+-- ProximityPrompt管理（speed steal用）
 --========================
+local function registerPrompt(prompt)
+    if not originalPromptTimes[prompt] then
+        originalPromptTimes[prompt]=prompt.HoldDuration
+    end
+
+    if speedStealEnabled then
+        prompt.HoldDuration=0
+    end
+end
+
 for _,v in ipairs(game:GetDescendants()) do
     if v:IsA("ProximityPrompt") then
-        v.HoldDuration=0
+        registerPrompt(v)
     end
 end
 
 game.DescendantAdded:Connect(function(v)
     if v:IsA("ProximityPrompt") then
-        v.HoldDuration=0
+        registerPrompt(v)
     end
 end)
 
@@ -117,6 +129,27 @@ local Window=Rayfield:CreateWindow({
 })
 
 local Tab=Window:CreateTab("メイン","home")
+
+--========================
+-- speed steal
+--========================
+Tab:CreateToggle({
+    Name="speed steal",
+    CurrentValue=false,
+    Callback=function(v)
+        speedStealEnabled=v
+
+        for prompt,time in pairs(originalPromptTimes) do
+            if prompt and prompt.Parent then
+                if v then
+                    prompt.HoldDuration=0
+                else
+                    prompt.HoldDuration=time
+                end
+            end
+        end
+    end
+})
 
 --========================
 -- collect money
