@@ -1,0 +1,219 @@
+--[[
+WARNING: Heads up! This script has not been verified by ScriptBlox. Use at your own risk!
+]]
+
+--========================
+-- ProximityPrompt 0秒
+--========================
+for _, prompt in ipairs(game:GetDescendants()) do
+	if prompt:IsA("ProximityPrompt") then
+		prompt.HoldDuration = 0
+	end
+end
+
+game.DescendantAdded:Connect(function(obj)
+	if obj:IsA("ProximityPrompt") then
+		obj.HoldDuration = 0
+	end
+end)
+
+print("E Buttons are set to 0 delay//--Script made by D3v1lHub")
+
+--========================
+-- SERVICES
+--========================
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+
+local player = Players.LocalPlayer
+local TARGET_NAME = "ClaimBrainrot"
+
+-- 拠点座標
+local BASE_POS = Vector3.new(292.6, 5.0, -68.9)
+
+local targetPart
+local freezeEnabled = false
+local freezePosition
+local attachEnabled = true
+local eSpam = false
+local coordVisible = false
+
+--========================
+-- キャラ取得
+--========================
+local function getRoot()
+	local char = player.Character or player.CharacterAdded:Wait()
+	return char:WaitForChild("HumanoidRootPart")
+end
+
+--========================
+-- ClaimBrainrot自動取得
+--========================
+task.spawn(function()
+	while true do
+		if not targetPart or not targetPart.Parent then
+			targetPart = workspace:FindFirstChild(TARGET_NAME, true)
+			if targetPart then
+				targetPart.Anchored = false
+			end
+		end
+		task.wait(1)
+	end
+end)
+
+--========================
+-- INSTANT STEAL（体ピタ固定）
+--========================
+RunService.RenderStepped:Connect(function()
+	if not attachEnabled then return end
+
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	if root and targetPart and targetPart.Parent then
+		targetPart.CFrame = root.CFrame
+	end
+end)
+
+--========================
+-- 完全位置固定
+--========================
+RunService.RenderStepped:Connect(function()
+	if freezeEnabled and freezePosition then
+		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+		if root then
+			root.CFrame = CFrame.new(freezePosition)
+			root.AssemblyLinearVelocity = Vector3.zero
+			root.AssemblyAngularVelocity = Vector3.zero
+		end
+	end
+end)
+
+--========================
+-- Eスパム（0.2秒）
+--========================
+task.spawn(function()
+	while true do
+		if eSpam then
+			VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+			VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+		end
+		task.wait(0.2)
+	end
+end)
+
+--========================
+-- UI
+--========================
+local gui = Instance.new("ScreenGui", player.PlayerGui)
+gui.ResetOnSpawn = false
+
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0,220,0,280)
+frame.Position = UDim2.new(0,20,0.5,-140)
+frame.BackgroundColor3 = Color3.fromRGB(10,10,10)
+frame.BorderSizePixel = 2
+frame.BorderColor3 = Color3.fromRGB(120,120,120)
+frame.Active = true
+frame.Draggable = true
+
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1,0,0,30)
+title.BackgroundColor3 = Color3.fromRGB(0,0,0)
+title.Text = "CONTROL PANEL"
+title.TextColor3 = Color3.new(1,1,1)
+title.TextScaled = true
+
+--========================
+-- ボタン生成
+--========================
+local function makeBtn(text,y)
+	local b = Instance.new("TextButton", frame)
+	b.Size = UDim2.new(1,-10,0,35)
+	b.Position = UDim2.new(0,5,0,y)
+	b.Text = text
+	b.TextScaled = true
+	b.TextColor3 = Color3.new(1,1,1)
+	b.BackgroundColor3 = Color3.fromRGB(25,25,25)
+	b.BorderColor3 = Color3.fromRGB(120,120,120)
+	return b
+end
+
+-- INSTANT STEAL
+local attachBtn = makeBtn("INSTANT STEAL : ON",40)
+attachBtn.MouseButton1Click:Connect(function()
+	attachEnabled = not attachEnabled
+	attachBtn.Text = "INSTANT STEAL : "..(attachEnabled and "ON" or "OFF")
+end)
+
+-- 位置固定
+local freezeBtn = makeBtn("位置固定 : OFF",85)
+freezeBtn.MouseButton1Click:Connect(function()
+	freezeEnabled = not freezeEnabled
+	if freezeEnabled then freezePosition = getRoot().Position end
+	freezeBtn.Text = "位置固定 : "..(freezeEnabled and "ON" or "OFF")
+end)
+
+-- Eスパム
+local eBtn = makeBtn("Eスパム : OFF",130)
+eBtn.MouseButton1Click:Connect(function()
+	eSpam = not eSpam
+	eBtn.Text = "Eスパム : "..(eSpam and "ON" or "OFF")
+end)
+
+-- 拠点TP
+local baseBtn = makeBtn("拠点TP",175)
+baseBtn.MouseButton1Click:Connect(function()
+	getRoot().CFrame = CFrame.new(BASE_POS)
+end)
+
+-- 座標表示ボタン
+local coordBtn = makeBtn("座標表示 : OFF",220)
+
+--========================
+-- 座標UI（初期非表示）
+--========================
+local coordLabel = Instance.new("TextLabel", gui)
+coordLabel.Size = UDim2.new(0,260,0,30)
+coordLabel.Position = UDim2.new(1,-270,0,20)
+coordLabel.BackgroundColor3 = Color3.fromRGB(0,0,0)
+coordLabel.TextColor3 = Color3.new(1,1,1)
+coordLabel.TextScaled = true
+coordLabel.BorderColor3 = Color3.fromRGB(120,120,120)
+coordLabel.Visible = false
+
+coordBtn.MouseButton1Click:Connect(function()
+	coordVisible = not coordVisible
+	coordLabel.Visible = coordVisible
+	coordBtn.Text = "座標表示 : "..(coordVisible and "ON" or "OFF")
+end)
+
+-- 座標更新
+RunService.RenderStepped:Connect(function()
+	if not coordVisible then return end
+
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	if root then
+		local pos = root.Position
+		coordLabel.Text = string.format("X: %.1f  Y: %.1f  Z: %.1f", pos.X, pos.Y, pos.Z)
+	end
+end)
+
+--========================
+-- 右上 UI表示/非表示
+--========================
+local toggleBtn = Instance.new("TextButton", gui)
+toggleBtn.Size = UDim2.new(0,60,0,30)
+toggleBtn.Position = UDim2.new(1,-70,0,60)
+toggleBtn.Text = "UI"
+toggleBtn.TextScaled = true
+toggleBtn.BackgroundColor3 = Color3.fromRGB(20,20,20)
+toggleBtn.TextColor3 = Color3.new(1,1,1)
+toggleBtn.BorderColor3 = Color3.fromRGB(120,120,120)
+toggleBtn.Active = true
+toggleBtn.Draggable = true
+
+local hidden = false
+toggleBtn.MouseButton1Click:Connect(function()
+	hidden = not hidden
+	frame.Visible = not hidden
+end)
