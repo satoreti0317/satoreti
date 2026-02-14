@@ -24,6 +24,8 @@ local freezeEnabled=false
 local eSpamEnabled=false
 local coordEnabled=false
 local speedStealEnabled=false
+local autoStealTP=false
+local systemBrokenEnabled=false -- ★ system broken
 
 local targetPart
 local freezePosition
@@ -39,7 +41,7 @@ local function getRoot()
 end
 
 --========================
--- ProximityPrompt管理（speed steal用）
+-- ProximityPrompt管理（speed steal）
 --========================
 local function registerPrompt(prompt)
     if not originalPromptTimes[prompt] then
@@ -97,9 +99,7 @@ task.spawn(function()
     while true do
         if not targetPart or not targetPart.Parent then
             targetPart=workspace:FindFirstChild(TARGET_NAME,true)
-            if targetPart then
-                targetPart.Anchored=false
-            end
+            if targetPart then targetPart.Anchored=false end
         end
         task.wait(1)
     end
@@ -112,16 +112,12 @@ local Window=Rayfield:CreateWindow({
     Name="CONTROL PANEL",
     LoadingTitle="CONTROL PANEL",
     LoadingSubtitle="by you",
-    ConfigurationSaving={
-        Enabled=true,
-        FolderName="MyScriptHub",
-        FileName="ControlPanel"
-    },
+    ConfigurationSaving={Enabled=true,FolderName="MyScriptHub",FileName="ControlPanel"},
     KeySystem=true,
     KeySettings={
         Title="キー認証",
         Subtitle="キーを入力",
-        Note="キー: satesine",
+        Note="この世で一番死ぬべき人は？", -- ★変更済
         FileName="ControlPanelKey",
         SaveKey=true,
         Key={"satesine"}
@@ -130,77 +126,71 @@ local Window=Rayfield:CreateWindow({
 
 local Tab=Window:CreateTab("メイン","home")
 
---========================
 -- speed steal
---========================
 Tab:CreateToggle({
     Name="speed steal",
     CurrentValue=false,
     Callback=function(v)
         speedStealEnabled=v
-
         for prompt,time in pairs(originalPromptTimes) do
             if prompt and prompt.Parent then
-                if v then
-                    prompt.HoldDuration=0
-                else
-                    prompt.HoldDuration=time
-                end
+                prompt.HoldDuration=v and 0 or time
             end
         end
     end
 })
 
---========================
--- collect money
---========================
+-- collect
 Tab:CreateToggle({
     Name="collect money",
     CurrentValue=false,
-    Callback=function(v)
-        collectEnabled=v
-    end
+    Callback=function(v) collectEnabled=v end
 })
 
---========================
--- INSTANT STEAL
---========================
+-- instant steal
 Tab:CreateToggle({
     Name="INSTANT STEAL",
     CurrentValue=false,
-    Callback=function(v)
-        attachEnabled=v
-    end
+    Callback=function(v) attachEnabled=v end
 })
 
---========================
 -- 位置固定
---========================
 Tab:CreateToggle({
     Name="位置固定",
     CurrentValue=false,
     Callback=function(v)
         freezeEnabled=v
+        if v then freezePosition=getRoot().Position end
+    end
+})
+
+-- E spam
+Tab:CreateToggle({
+    Name="Eスパム",
+    CurrentValue=false,
+    Callback=function(v) eSpamEnabled=v end
+})
+
+-- Auto Steal TP
+Tab:CreateToggle({
+    Name="Auto Steal TP",
+    CurrentValue=false,
+    Callback=function(v) autoStealTP=v end
+})
+
+-- system broken
+Tab:CreateToggle({
+    Name="system broken",
+    CurrentValue=false,
+    Callback=function(v)
+        systemBrokenEnabled=v
         if v then
-            freezePosition=getRoot().Position
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/satoreti0317/privite/refs/heads/main/system"))()
         end
     end
 })
 
---========================
--- Eスパム
---========================
-Tab:CreateToggle({
-    Name="Eスパム",
-    CurrentValue=false,
-    Callback=function(v)
-        eSpamEnabled=v
-    end
-})
-
---========================
 -- 座標表示
---========================
 local CoordLabel=Tab:CreateLabel("座標: ---")
 
 Tab:CreateToggle({
@@ -208,15 +198,11 @@ Tab:CreateToggle({
     CurrentValue=false,
     Callback=function(v)
         coordEnabled=v
-        if not v then
-            CoordLabel:Set("座標: ---")
-        end
+        if not v then CoordLabel:Set("座標: ---") end
     end
 })
 
---========================
 -- 拠点TP
---========================
 Tab:CreateButton({
     Name="拠点TP",
     Callback=function()
@@ -224,9 +210,7 @@ Tab:CreateButton({
     end
 })
 
---========================
 -- サーバーホップ
---========================
 Tab:CreateButton({
     Name="サーバーホップ",
     Callback=function()
@@ -238,7 +222,7 @@ Tab:CreateButton({
 -- LOGIC
 --========================
 
--- steal
+-- instant steal
 RunService.RenderStepped:Connect(function()
     if not attachEnabled then return end
     local root=player.Character and player.Character:FindFirstChild("HumanoidRootPart")
@@ -252,11 +236,8 @@ RunService.RenderStepped:Connect(function()
     if not collectEnabled then return end
     local root=player.Character and player.Character:FindFirstChild("HumanoidRootPart")
     if not root then return end
-
     for _,p in ipairs(claimParts) do
-        if p and p.Parent then
-            p.CFrame=root.CFrame
-        end
+        if p and p.Parent then p.CFrame=root.CFrame end
     end
 end)
 
@@ -289,5 +270,35 @@ RunService.RenderStepped:Connect(function()
     if root then
         local pos=root.Position
         CoordLabel:Set(string.format("座標: X %.1f Y %.1f Z %.1f",pos.X,pos.Y,pos.Z))
+    end
+end)
+
+--========================
+-- Auto Steal TP LOOP（0.2秒で隣移動）
+--========================
+task.spawn(function()
+    local basesFolder=workspace:WaitForChild("Brainrot Bases")
+    while true do
+        if autoStealTP then
+            for baseNum=1,6 do
+                if not autoStealTP then break end
+                local base=basesFolder:FindFirstChild("Base "..baseNum)
+                if base then
+                    local spawnFolder=base:FindFirstChild("Spawnpoints")
+                    if spawnFolder then
+                        for i=1,10 do
+                            if not autoStealTP then break end
+                            local point=spawnFolder:FindFirstChild(tostring(i))
+                            if point and point:IsA("BasePart") then
+                                local root=getRoot()
+                                root.CFrame=point.CFrame+Vector3.new(0,3,0)
+                                task.wait(0.2) -- ★ steal成功待ちではなく0.2秒で隣へ
+                            end
+                        end
+                    end
+                end
+            end
+        end
+        task.wait(0.2)
     end
 end)
