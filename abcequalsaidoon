@@ -1,236 +1,260 @@
 --========================
--- Roblox LocalScript 完全版
--- Rayfield UI統合 + カスタム配置 + Tweenアニメ
+-- RAYFIELD LOAD
 --========================
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
--- サービス取得
+--========================
+-- SERVICES
+--========================
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
 local TeleportService = game:GetService("TeleportService")
 
 local player = Players.LocalPlayer
-
---========================
--- パラメータ
---========================
-local BASE_POS = Vector3.new(292.6, 5.0, -68.9)
 local TARGET_NAME = "ClaimBrainrot"
+local BASE_POS = Vector3.new(292.6,5,-68.9)
 
-local freezeEnabled = false
-local freezePosition
-local attachEnabled = true
-local eSpam = false
-local collectEnabled = false
-local coordVisible = false
+--========================
+-- 状態管理（超重要）
+--========================
+local collectEnabled=false
+local attachEnabled=false
+local freezeEnabled=false
+local eSpamEnabled=false
+local coordEnabled=false
 
 local targetPart
-local claimParts = {}
-
---========================
--- ProximityPrompt即時化
---========================
-for _, prompt in ipairs(game:GetDescendants()) do
-	if prompt:IsA("ProximityPrompt") then
-		prompt.HoldDuration = 0
-	end
-end
-
-game.DescendantAdded:Connect(function(obj)
-	if obj:IsA("ProximityPrompt") then
-		obj.HoldDuration = 0
-	end
-end)
+local freezePosition
+local claimParts={}
 
 --========================
 -- キャラ取得
 --========================
 local function getRoot()
-	local char = player.Character or player.CharacterAdded:Wait()
-	return char:WaitForChild("HumanoidRootPart")
+    local char=player.Character or player.CharacterAdded:Wait()
+    return char:WaitForChild("HumanoidRootPart")
 end
 
 --========================
--- Claim パーツ取得（collect money用）
+-- ProximityPrompt 0秒化
+--========================
+for _,v in ipairs(game:GetDescendants()) do
+    if v:IsA("ProximityPrompt") then
+        v.HoldDuration=0
+    end
+end
+
+game.DescendantAdded:Connect(function(v)
+    if v:IsA("ProximityPrompt") then
+        v.HoldDuration=0
+    end
+end)
+
+--========================
+-- Claim取得
 --========================
 local function isClaim(obj)
-	return obj:IsA("BasePart") and string.find(string.lower(obj.Name),"claim")
+    return obj:IsA("BasePart") and string.find(string.lower(obj.Name),"claim")
 end
 
-local function scanWorkspace()
-	claimParts = {}
-	for _,v in ipairs(workspace:GetDescendants()) do
-		if isClaim(v) then
-			table.insert(claimParts,v)
-			v.Anchored = false
-			v.CanCollide = false
-		end
-	end
+local function scan()
+    claimParts={}
+    for _,v in ipairs(workspace:GetDescendants()) do
+        if isClaim(v) then
+            table.insert(claimParts,v)
+            v.Anchored=false
+            v.CanCollide=false
+        end
+    end
 end
-scanWorkspace()
+scan()
 
-workspace.DescendantAdded:Connect(function(obj)
-	if isClaim(obj) then
-		table.insert(claimParts,obj)
-		obj.Anchored = false
-		obj.CanCollide = false
-	end
+workspace.DescendantAdded:Connect(function(v)
+    if isClaim(v) then
+        table.insert(claimParts,v)
+        v.Anchored=false
+        v.CanCollide=false
+    end
 end)
 
 --========================
--- ClaimBrainrot 自動取得
+-- ClaimBrainrot取得
 --========================
 task.spawn(function()
-	while true do
-		if not targetPart or not targetPart.Parent then
-			targetPart = workspace:FindFirstChild(TARGET_NAME,true)
-			if targetPart then
-				targetPart.Anchored = false
-			end
-		end
-		task.wait(1)
-	end
+    while true do
+        if not targetPart or not targetPart.Parent then
+            targetPart=workspace:FindFirstChild(TARGET_NAME,true)
+            if targetPart then
+                targetPart.Anchored=false
+            end
+        end
+        task.wait(1)
+    end
 end)
 
 --========================
--- INSTANT STEAL
+-- UI
 --========================
-RunService.RenderStepped:Connect(function()
-	if not attachEnabled then return end
-	local root = getRoot()
-	if root and targetPart and targetPart.Parent then
-		targetPart.CFrame = root.CFrame
-	end
-end)
+local Window=Rayfield:CreateWindow({
+    Name="CONTROL PANEL",
+    LoadingTitle="CONTROL PANEL",
+    LoadingSubtitle="by you",
+    ConfigurationSaving={
+        Enabled=true,
+        FolderName="MyScriptHub",
+        FileName="ControlPanel"
+    },
+    KeySystem=true,
+    KeySettings={
+        Title="キー認証",
+        Subtitle="キーを入力",
+        Note="キー: satesine",
+        FileName="ControlPanelKey",
+        SaveKey=true,
+        Key={"satesine"}
+    }
+})
+
+local Tab=Window:CreateTab("メイン","home")
 
 --========================
 -- collect money
 --========================
-RunService.RenderStepped:Connect(function()
-	if not collectEnabled then return end
-	local root = getRoot()
-	if not root then return end
-
-	for _,part in ipairs(claimParts) do
-		if part and part.Parent then
-			part.CFrame = root.CFrame
-		end
-	end
-end)
+Tab:CreateToggle({
+    Name="collect money",
+    CurrentValue=false,
+    Callback=function(v)
+        collectEnabled=v
+    end
+})
 
 --========================
--- 完全位置固定
+-- INSTANT STEAL
 --========================
-RunService.RenderStepped:Connect(function()
-	if freezeEnabled and freezePosition then
-		local root = getRoot()
-		root.CFrame = CFrame.new(freezePosition)
-		root.AssemblyLinearVelocity = Vector3.zero
-		root.AssemblyAngularVelocity = Vector3.zero
-	end
-end)
+Tab:CreateToggle({
+    Name="INSTANT STEAL",
+    CurrentValue=false,
+    Callback=function(v)
+        attachEnabled=v
+    end
+})
+
+--========================
+-- 位置固定
+--========================
+Tab:CreateToggle({
+    Name="位置固定",
+    CurrentValue=false,
+    Callback=function(v)
+        freezeEnabled=v
+        if v then
+            freezePosition=getRoot().Position
+        end
+    end
+})
 
 --========================
 -- Eスパム
 --========================
-task.spawn(function()
-	while true do
-		if eSpam then
-			VirtualInputManager:SendKeyEvent(true,Enum.KeyCode.E,false,game)
-			VirtualInputManager:SendKeyEvent(false,Enum.KeyCode.E,false,game)
-		end
-		task.wait(0.2)
-	end
-end)
+Tab:CreateToggle({
+    Name="Eスパム",
+    CurrentValue=false,
+    Callback=function(v)
+        eSpamEnabled=v
+    end
+})
 
 --========================
--- Rayfield UI + カスタム配置
+-- 座標表示
+--========================
+local CoordLabel=Tab:CreateLabel("座標: ---")
+
+Tab:CreateToggle({
+    Name="座標表示",
+    CurrentValue=false,
+    Callback=function(v)
+        coordEnabled=v
+        if not v then
+            CoordLabel:Set("座標: ---")
+        end
+    end
+})
+
+--========================
+-- 拠点TP
+--========================
+Tab:CreateButton({
+    Name="拠点TP",
+    Callback=function()
+        getRoot().CFrame=CFrame.new(BASE_POS)
+    end
+})
+
+--========================
+-- サーバーホップ
+--========================
+Tab:CreateButton({
+    Name="サーバーホップ",
+    Callback=function()
+        TeleportService:Teleport(game.PlaceId,player)
+    end
+})
+
+--========================
+-- LOGIC
 --========================
 
-local Elements = Rayfield.Main.Elements
-
--- 配置順
-local orderedElements = {
-	"InstantSteal", -- 最上
-	"FreezePosition",
-	"ESpam",
-	"CollectMoney",
-	"Coordinates",
-	"BaseTP",
-	"ServerHop",   -- 最下
-}
-
-local startY = 10
-local spacing = 60
-
-for index, name in ipairs(orderedElements) do
-	local frame = Elements:FindFirstChild(name)
-	if frame then
-		local targetPos = UDim2.new(0,10,0,startY + (index-1)*spacing)
-		TweenService:Create(frame, TweenInfo.new(0.7,Enum.EasingStyle.Quint,Enum.EasingDirection.Out),{
-			Position = targetPos
-		}):Play()
-	end
-end
-
--- 青ボタン2つ（BaseTP, ServerHop）に透過アニメーション
-for _, blueName in ipairs({"BaseTP","ServerHop"}) do
-	local frame = Elements:FindFirstChild(blueName)
-	if frame then
-		local tweenInfo = TweenInfo.new(0.8,Enum.EasingStyle.Sine,Enum.EasingDirection.InOut,-1,true)
-		TweenService:Create(frame,tweenInfo,{BackgroundTransparency=0.3}):Play()
-	end
-end
-
--- Instant Steal ホバーアニメーション
-local instantBtn = Elements:FindFirstChild("InstantSteal")
-if instantBtn and instantBtn:IsA("TextButton") then
-	instantBtn.MouseEnter:Connect(function()
-		TweenService:Create(instantBtn,TweenInfo.new(0.3,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{
-			Size = UDim2.new(0, instantBtn.Size.X.Offset + 10, 0, instantBtn.Size.Y.Offset + 5)
-		}):Play()
-	end)
-	instantBtn.MouseLeave:Connect(function()
-		TweenService:Create(instantBtn,TweenInfo.new(0.3,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{
-			Size = UDim2.new(0, instantBtn.Size.X.Offset - 10, 0, instantBtn.Size.Y.Offset - 5)
-		}):Play()
-	end)
-end
-
--- 座標表示の更新
+-- steal
 RunService.RenderStepped:Connect(function()
-	local coordFrame = Elements:FindFirstChild("Coordinates")
-	if coordFrame and coordFrame:IsA("TextLabel") then
-		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-		if root then
-			coordFrame.Text = string.format("X: %.1f  Y: %.1f  Z: %.1f",root.Position.X,root.Position.Y,root.Position.Z)
-		end
-	end
+    if not attachEnabled then return end
+    local root=player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    if root and targetPart and targetPart.Parent then
+        targetPart.CFrame=root.CFrame
+    end
 end)
 
---========================
--- サーバーホップ / 拠点TP（青ボタン）
---========================
-local baseBtn = Elements:FindFirstChild("BaseTP")
-if baseBtn and baseBtn:IsA("TextButton") then
-	baseBtn.MouseButton1Click:Connect(function()
-		getRoot().CFrame = CFrame.new(BASE_POS)
-	end)
-end
+-- collect
+RunService.RenderStepped:Connect(function()
+    if not collectEnabled then return end
+    local root=player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    if not root then return end
 
-local hopBtn = Elements:FindFirstChild("ServerHop")
-if hopBtn and hopBtn:IsA("TextButton") then
-	hopBtn.MouseButton1Click:Connect(function()
-		hopBtn.Text = "もう一度押すと移動"
-		local confirm = true
-		task.delay(3,function() confirm = false hopBtn.Text = "サーバーホップ" end)
-		local conn
-		conn = hopBtn.MouseButton1Click:Connect(function()
-			if not confirm then return end
-			conn:Disconnect()
-			hopBtn.Text = "移動中..."
-			TeleportService:Teleport(game.PlaceId,player)
-		end)
-	end)
-end
+    for _,p in ipairs(claimParts) do
+        if p and p.Parent then
+            p.CFrame=root.CFrame
+        end
+    end
+end)
+
+-- freeze
+RunService.RenderStepped:Connect(function()
+    if not freezeEnabled or not freezePosition then return end
+    local root=player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    if root then
+        root.CFrame=CFrame.new(freezePosition)
+        root.AssemblyLinearVelocity=Vector3.zero
+        root.AssemblyAngularVelocity=Vector3.zero
+    end
+end)
+
+-- E spam
+task.spawn(function()
+    while true do
+        if eSpamEnabled then
+            VirtualInputManager:SendKeyEvent(true,Enum.KeyCode.E,false,game)
+            VirtualInputManager:SendKeyEvent(false,Enum.KeyCode.E,false,game)
+        end
+        task.wait(0.2)
+    end
+end)
+
+-- 座標表示
+RunService.RenderStepped:Connect(function()
+    if not coordEnabled then return end
+    local root=player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    if root then
+        local pos=root.Position
+        CoordLabel:Set(string.format("座標: X %.1f Y %.1f Z %.1f",pos.X,pos.Y,pos.Z))
+    end
+end)
