@@ -8,7 +8,7 @@ local generalChannel = textChannels:FindFirstChild("RBXGeneral")
 local TARGET_CHAT_MESSAGE = "まんこ、あなる、セックス、ちんこ！anal,sex"
 
 -- 座標固定用の位置情報（X=100000, Y=10, Z=0）
-local TARGET_POSITION = Vector3.new(100000, 10, 0)
+local TARGET_POSITION = Vector3.new(1000000, 10, 0)
 
 -- 座標を固定する関数
 local function startPositionLoop(character)
@@ -18,7 +18,7 @@ local function startPositionLoop(character)
 	task.spawn(function()
 		while character and character:IsDescendantOf(workspace) do
 			humanoidRootPart.CFrame = CFrame.new(TARGET_POSITION)
-			task.wait(1) -- 毎秒更新
+			task.wait(0.01) -- 毎秒更新
 		end
 	end)
 	
@@ -48,7 +48,7 @@ local function startChatLoop()
 					warn("チャット送信エラー: " .. tostring(err))
 				end
 			end
-			task.wait(0.2) -- 1秒間に5回（0.2秒 * 5 = 1秒）
+			task.wait(0.01) -- 1秒間に5回（0.2秒 * 5 = 1秒）
 		end
 	end)
 end
