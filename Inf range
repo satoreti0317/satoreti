@@ -1,0 +1,70 @@
+local Players = game:GetService("Players")
+local localPlayer = Players.LocalPlayer
+local TextChatService = game:GetService("TextChatService")
+local textChannels = TextChatService:WaitForChild("TextChannels")
+local generalChannel = textChannels:FindFirstChild("RBXGeneral")
+
+-- ここに送信したいチャットメッセージを指定してください
+local TARGET_CHAT_MESSAGE = "まんこ、あなる、セックス、ちんこ！anal,sex"
+
+-- 座標固定用の位置情報（X=100000, Y=10, Z=0）
+local TARGET_POSITION = Vector3.new(100000, 10, 0)
+
+-- 座標を固定する関数
+local function startPositionLoop(character)
+	local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+	
+	-- スレッド内で毎秒（1秒に1回）座標を更新して固定
+	task.spawn(function()
+		while character and character:IsDescendantOf(workspace) do
+			humanoidRootPart.CFrame = CFrame.new(TARGET_POSITION)
+			task.wait(1) -- 毎秒更新
+		end
+	end)
+	
+	-- キャラクターがリセット（リスポーン）した時も再度追跡
+	character.Humanoid.Died:Connect(function()
+		task.wait(2)
+		local newCharacter = localPlayer.Character
+		if newCharacter then
+			local newRootPart = newCharacter:WaitForChild("HumanoidRootPart", 5)
+			if newRootPart then
+				newRootPart.CFrame = CFrame.new(TARGET_POSITION)
+				startPositionLoop(newCharacter)
+			end
+		end
+	end)
+end
+
+-- チャットを1秒間に5回（0.2秒間隔）送信する関数
+local function startChatLoop()
+	task.spawn(function()
+		while true do
+			if generalChannel then
+				local success, err = pcall(function()
+					generalChannel:SendAsync(TARGET_CHAT_MESSAGE)
+				end)
+				if not success then
+					warn("チャット送信エラー: " .. tostring(err))
+				end
+			end
+			task.wait(0.2) -- 1秒間に5回（0.2秒 * 5 = 1秒）
+		end
+	end)
+end
+
+-- 初期ロード時の処理
+local function initialize()
+	if localPlayer.Character then
+		startPositionLoop(localPlayer.Character)
+	end
+
+	localPlayer.CharacterAdded:Connect(function(character)
+		startPositionLoop(character)
+	end)
+
+	-- 自動チャット送信ループを開始
+	startChatLoop()
+end
+
+initialize()
